@@ -41,6 +41,6 @@ def getinfo():
     disk = psutil.disk_usage("/dev/mmcblk0p4")
     cpu = psutil.cpu_count()
     ram = psutil.virtual_memory()
-    l = {"CPU":cpu,"disk":disk,"ram":ram.available/1024/1024}
+    l = {"CPU":cpu,"disk":disk,"ram":ram}
     r = {"code":0,"Re":"ok","data":str(l)}
     return r
