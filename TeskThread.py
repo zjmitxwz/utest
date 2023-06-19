@@ -54,6 +54,12 @@ class TeskThread(threading.Thread):
                     pass
 
 
+                # 获取服务器信息
+                elif(tesk_name=="getinfo"):
+                    s = tools.getinfo()
+                    r = '{"tesk_name":"'+tesk_name+'","code":"'+s["code"]+'","rdata":"'+s["data"]+'","Re":"ok"}'
+                    self.push(self.program_status["config"]["theme"]["r_topic_ok"],r)
+
                 # 删除U盘文件
                 elif(tesk_name=="redisk"):
                     try:
