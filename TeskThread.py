@@ -55,16 +55,14 @@ class TeskThread(threading.Thread):
 
 
                 # 删除U盘文件
-                elif(tesk_name=="delete"):
-                    e = ["","/","/*"]
-                    for i in data["data"]:
-                        if(i not in e):
-                            print(i)
-                        else:
-                            r = '{"tesk_name":'+tesk_name+',"code":-1'+',"Re":"不允许删除这个文件夹"}'
-                            self.push(self.program_status["config"]["theme"]["r_topic_err"],r)
-
-
+                elif(tesk_name=="redisk"):
+                    try:
+                        self.reset()
+                        r = '{"tesk_name":"'+tesk_name+'","code":1,"Re":"更新磁盘成功"}'
+                        self.push(self.program_status["config"]["theme"]["r_topic_ok"],r)
+                    except:
+                        r = '{"tesk_name":"'+tesk_name+'","code":-1,"Re":"更新磁盘出错"}'
+                        self.push(self.program_status["config"]["theme"]["r_topic_err"],r)
 
                 # 任务传入错误异常
                 else:
@@ -74,7 +72,7 @@ class TeskThread(threading.Thread):
 
         # 异常处理
         except Exception as e:
-            r  = r = '{"tesk_name":'+'空'+',"code":-1,"Re":"处理线程异常"}'
+            r  =  '{"tesk_name":'+'空'+',"code":-1,"Re":"处理线程异常"}'
             self.push(self.program_status["config"]["theme"]["r_topic_err"],r)
         finally:
             self.program_status["tesk_thread_status"] = 0
@@ -84,6 +82,7 @@ class TeskThread(threading.Thread):
             os.system("sync")
             tools.rmmod()
             tools.insmod_ko("/dev/mmcblk0p4")
+            os.system("sync")
 
 
     def push(self,theme,data):
