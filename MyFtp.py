@@ -48,23 +48,27 @@ class MyFtp():
         self.ftpc.cwd("..")
         return {"code":0,"Re":"下载完毕"}
     def upload_file(self,local_path,server_path):
-        p0 = os.path.split(server_path)
-        p1 = p0[0].split("/")
-        s_p = ""
-        for i in p1:
-            s_p= s_p+i+"/"
+        s_p = os.path.split(server_path)
+        print(server_path)
+        s_p = s_p[0].split("/")
+        sp = ""
+        for i in s_p:
+            sp=sp+i+"/"
             try:
-                self.ftpc.cwd(s_p)
+                self.ftpc.cwd(sp)
             except Exception as e:
-                self.ftpc.mkd(s_p)
+                print(e)
+                self.ftpc.mkd(sp)
             finally:
                 self.ftpc.cwd("/")
-        if(os.path.exists(local_path)):
-            file = open(local_path,"rb")
-            self.ftpc.storbinary("STOR %s"%server_path,file)
-        else:
-            pass
-            
+
+        with open(local_path,"rb") as f:
+            buff = 1024*1024
+            self.ftpc.storbinary("STOR %s" % server_path,f,buff)
+
+
+
+
     def upload_free(self,local_path,server_path):
         if(os.path.exists(local_path)):
             p1 = server_path.split("/")

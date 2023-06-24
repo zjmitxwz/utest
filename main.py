@@ -24,6 +24,7 @@ def on_message(client, userdata, msg):
     tesk_queue.put(tesk)
     if(not p_data["tesk_thread_status"]):
         ftp_config = config["ftp-server"]
+        
         ftp = MyFtp.MyFtp(ftp_config["host"],int(ftp_config["port"]),ftp_config["user"],ftp_config["pwd"])
         thread = TeskThread.TeskThread(mqtt_client,tesk_queue,p_data,ftp)
         thread.start()

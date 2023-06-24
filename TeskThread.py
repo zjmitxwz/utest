@@ -51,8 +51,18 @@ class TeskThread(threading.Thread):
                 
                 # 将U盘文件夹或文件上传到ftp
                 elif(tesk_name=="upload"):
-                    pass
-
+                    for i in data["data"]:
+                        if(os.path.exists(os.path.join(self.program_status["data_path"],i))):
+                            if(os.path.isfile(os.path.join(self.program_status["data_path"],i))):
+                                self.ftp.upload_file(os.path.join(self.program_status["data_path"],i),i)
+                            else:
+                                r = '{"tesk_name":'+tesk_name+',"code":-1,"Re":"不是一个文件"}'
+                                self.push(self.program_status["config"]["theme"]["r_topic_err"],r)
+                        else:
+                            r =  '{"tesk_name":'+tesk_name+',"code":-1,"Re":"U盘不存在这个文件"}'
+                            self.push(self.program_status["config"]["theme"]["r_topic_err"],r)
+                            print(r)
+                            
 
                 # 获取服务器信息
                 elif(tesk_name=="getinfo"):
@@ -74,10 +84,12 @@ class TeskThread(threading.Thread):
                 else:
                     r = '{"tesk_name":'+tesk_name+',"code":-1,"Re":"任务错误"}'
                     self.push(self.program_status["config"]["theme"]["r_topic_err"],r)
+                    print("err")
             print(data["tesk_name"]+"处理结束")
 
         # 异常处理
         except Exception as e:
+            print(e)
             r  =  '{"tesk_name":'+'空'+',"code":-1,"Re":"处理线程异常"}'
             self.push(self.program_status["config"]["theme"]["r_topic_err"],r)
         finally:
