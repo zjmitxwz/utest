@@ -43,13 +43,12 @@ def get_config(file):
     return list
 
 def set_ip(d):
-    print(d)
     if(d["ip"])=="0.0.0.0":
         text = "auto eth0\niface eth0 inet dhcp\n"
         with open("/etc/network/interfaces.d/usereth0","w",encoding="utf-8") as f:
             f.writelines(text)
     else:
-        text = "auto eth0\niface eth0 inet static\naddress {}\nnetmask {}\ngateway {}\nbroadcast {}\n".format(d["ip"],d["subnetmask"],d["interway"],d["broadcast"])
+        text = "auto eth0\niface eth0 inet static\naddress {}\nnetmask {}\ngateway {}\ndns-nameservers {}\n".format(d["ip"],d["netmask"],d["gateway"],d["dns"])
         with open("/etc/network/interfaces.d/usereth0","w",encoding="utf-8") as f:
             f.writelines(text)
 

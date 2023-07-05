@@ -62,25 +62,24 @@ class Myftp():
             self.status = -1
             return {"code":0,"re":e.strerror}
 
-    def dow(self,list):
+    def dow(self,list,save):
         ok = []
         err = []
-
         for i in list:
             if(os.path.splitext(i)[-1]!=""):
-                t = self._dowfile(i)
+                t = self._dowfile(i,save)
                 if(t["code"]==0):
                     ok.append(t)
                 else:
                     err.append(t)
             else:
-                t = self._dowfree(i)
+                t = self._dowfree(i,save)
                 if(t["code"]==0):
                     ok.append(t)
                 else:
                     err.append(t)
         return {"code":0,"ok":ok,"err":err}
-    def _dowfile(self,file):
+    def _dowfile(self,file,save):
         ftp_p = os.path.split(file)[0]
         try:
             list = self.ftp.nlst(ftp_p)
@@ -91,7 +90,7 @@ class Myftp():
             print("服务器不存在这个文件")
             return {"code":-1,"re":"服务器不存在这个文件"}
         path = Pgm_env.data_path
-        for i in ftp_p.split("/"):
+        for i in save.split("/"):
             path = os.path.join(path,i) 
         file_n = os.path.split(file)[-1]
         if(not os.path.exists(path)):
@@ -103,23 +102,31 @@ class Myftp():
             f.flush()
         print("文件:{}下载完毕".format(file_n))
         return {"code":0,"re":"文件:{}下载完毕".format(file_n),"filename":file_n}
-    def _dowfree(self,free):
+    def _dowfree(self,free,save):
         try:
             list = self.ftp.nlst(free)
         except:
             print("服务器不存在这个目录{}".format(free))
             return {"code":-1,"re":"服务器不存在这个目录"}
         s = free.split("/")
-        path = Pgm_env.data_path
+        s.reverse()
+        p = ""
         for i in s:
-            path = os.path.join(path,i)
+            p = i
+            if(p!=""):
+                break
+        save_p = ""
+        for i in save.split("/"):
+            save_p = os.path.join(save_p,i)
+        save_p = os.path.join(save_p,p)
+        path = os.path.join(Pgm_env.data_path,save_p)
         if(not os.path.exists(path)):
             os.makedirs(path)
         for i in list:
             if(os.path.splitext(i)[-1]!=""):
-                self._dowfile(i)
+                self._dowfile(i,save_p)
             else:
-                self._dowfree(i)
+                self._dowfree(i,save_p)
         return {"code":0,"re":"目录下载完毕"}
     
 
@@ -169,6 +176,7 @@ class Myftp():
             path = os.path.join(path,i)
         print(path)
         if(not os.path.exists(path)):
+            print("U盘不存在这个目录")
             return {"code":-1,"re":"U盘不存在这个目录"}
         f_p = "/"
         for i in p:
@@ -211,7 +219,10 @@ class TeskThread(threading.Thread):
                 Pgm_env.log("info","开始处理{}".format(data))
                 tesk = data["tesk"]
                 if(tesk=="dow"):
-                    t = self.ftp.dow(data["data"])
+                    save = "/"
+                    if("save" in data.keys()):
+                        save = data["save"]
+                    t = self.ftp.dow(data["data"],save)
                     for i in t["ok"]:
                         i["id"] = data["id"]
                         mqtt_client.publish(Pgm_env.config["theme"]["r_topic_ok"],json.dumps(i),0)
@@ -233,6 +244,7 @@ class TeskThread(threading.Thread):
                                 return
                             list = os.listdir(path)
                             r = {"code":0,"re":str(list)}
+                            r["id"] = data["id"]
                             print(r)
                             mqtt_client.publish(Pgm_env.config["theme"]["r_topic_ok"],json.dumps(r),0)
                         else:
@@ -360,17 +372,21 @@ if __name__ == "__main__":
 
     Pgm_env.log = Log(Pgm_env.pgm_path).log
     if(os.path.exists(os.path.join(Pgm_env.data_path,"config.ini"))):
+        if(os.path.exists(os.path.join(Pgm_env.pgm_path,"config/config.ini"))):
+            os.remove(os.path.join(Pgm_env.pgm_path,'config/config.ini'))
         shutil.move(os.path.join(Pgm_env.data_path,"config.ini"),os.path.join(Pgm_env.pgm_path,"config"))
         Pgm_env.log("info","设置IP--需要重启")
         s = tools.get_config(os.path.join(Pgm_env.pgm_path,"config/config.ini"))
         s = s["upan"]
         tools.set_ip(s)
         print(s)
+        sys.exit(0)
 
 
     if(not os.path.exists(os.path.join(Pgm_env.pgm_path,"config/config.ini"))):
         Pgm_env.log("error","配置文件不存在,将默认配置文件写入U盘--修改完配置文件重启")
         shutil.copyfile(os.path.join(Pgm_env.pgm_path,"config/defconfig.ini"),os.path.join(Pgm_env.data_path,"config.ini"))
+        tools.log_move(os.path.join(Pgm_env.pgm_path,"log"),Pgm_env.data_path)
         tools.rmmod()
         tools.insmod(Pgm_env.data_disk)
         sys.exit(-1)
