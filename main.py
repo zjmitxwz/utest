@@ -256,7 +256,23 @@ class TeskThread(threading.Thread):
                 if(tesk == "up"):
                     t = self.ftp.up(data["data"])
                     mqtt_client.publish(Pgm_env.config["theme"]["r_topic_ok"],json.dumps(t),0)
-                
+                if(tesk == "del"):
+                    for i in data["data"]:
+                        t = Pgm_env.data_path
+                        for j in i.split("/"):
+                            t = os.path.join(t,j)
+                        if(not os.path.exists(t)):
+                            print(t)
+                            print("U盘不存在这个文件或者文件夹")
+                            return 
+                        if(os.path.splitext(i)[-1]==""):
+                            if(os.path.samefile(t,Pgm_env.data_path)):
+                                print(t)
+                        else:
+                            pass
+
+                else:
+                    print("不存在这个操作")
                 Pgm_env.log("info","处理完毕{}".format(data))
                 print("任务处理完毕:{}".format(data))
                 
