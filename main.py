@@ -305,7 +305,7 @@ def on_connect(client, userdata, flags, rc):
     if 0==rc:
         print("连接成功")
         Pgm_env.log("info","mqtt连接成功")
-        os.system("gpio write {} 1".format(Pgm_env["upan"]["mqttled"]))
+        os.system("gpio write {} 1".format(Pgm_env.config["upan"]["mqttled"]))
     elif 1==rc:
         print("连接失败-不正确的协议版本")
         Pgm_env.log("error","mqtt连接失败-不正确的协议版本")
@@ -348,7 +348,7 @@ def on_message(client, userdata, msg):
         print("ftp链接失败在尝试:{}次".format(str(t)))
     t = 0
     if(n["code"]!=0):
-        os.system("gpio write {} 0".format(Pgm_env["upan"]["ftpled"]))
+        os.system("gpio write {} 0".format(Pgm_env.config["upan"]["ftpled"]))
         Pgm_env.log("error","ftp尝试链接失败建议重启设备并且查看配置文件")
         client.publish(Pgm_env.config["theme"]["r_topic_err"],"ftp尝试链接失败,建议重启并查看配置文件",0)
         return
@@ -357,8 +357,6 @@ def on_message(client, userdata, msg):
         thread = TeskThread(mqtt_client,tesk_queue,ftp)
         thread.start()
     Pgm_env.thread_status = 1
-
-
 def on_disconnect(client, userdata, rc):
     if rc!=0:
         try:
