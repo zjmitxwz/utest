@@ -98,8 +98,10 @@ class Myftp():
         path = os.path.join(path,file_n)
         buffer_size = 102400
         with open(path,"wb+") as f:
+            os.system("gpio write {} 1".format(Pgm_env["upan"]["dowled"]))
             self.ftp.retrbinary("RETR {}".format(file),f.write,buffer_size)
             f.flush()
+            os.system("gpio write {} 0".format(Pgm_env["upan"]["dowled"]))
         print("文件:{}下载完毕".format(file_n))
         return {"code":0,"re":"文件:{}下载完毕".format(file_n),"filename":file_n}
     def _dowfree(self,free,save):
@@ -166,7 +168,9 @@ class Myftp():
                 self.ftp.mkd(f_p) 
         bufsiz=10240
         with open(path,"rb") as f:
+            os.system("gpio write {} 1".format(Pgm_env["upan"]["upled"]))
             self.ftp.storbinary("STOR {}".format(os.path.join(f_p,os.path.split(file)[-1])),f,bufsiz)
+            os.system("gpio write {} 0".format(Pgm_env["upan"]["upled"]))
         return {"code":0,"re":"文件上传成功"}
         
     def _upfree(self,free):
@@ -202,6 +206,7 @@ class Pgm_env():
     thread_status = 0
     log = None
     config = ""
+    status_led = "15"
 class TeskThread(threading.Thread):
     def __init__(self,client,tesk_queue,ftp):
         threading.Thread.__init__(self)
@@ -270,6 +275,9 @@ class TeskThread(threading.Thread):
                                 print(t)
                         else:
                             pass
+                if("tesk"=="reboot"):
+                    os.system("sync")
+                    os.system("reboot")
 
                 else:
                     print("不存在这个操作")
@@ -293,9 +301,11 @@ class TeskThread(threading.Thread):
 
 # mqtt链接回调函数
 def on_connect(client, userdata, flags, rc):
+    print(rc)
     if 0==rc:
         print("连接成功")
         Pgm_env.log("info","mqtt连接成功")
+        os.system("gpio write {} 1".format(Pgm_env["upan"]["mqttled"]))
     elif 1==rc:
         print("连接失败-不正确的协议版本")
         Pgm_env.log("error","mqtt连接失败-不正确的协议版本")
@@ -338,9 +348,11 @@ def on_message(client, userdata, msg):
         print("ftp链接失败在尝试:{}次".format(str(t)))
     t = 0
     if(n["code"]!=0):
+        os.system("gpio write {} 0".format(Pgm_env["upan"]["ftpled"]))
         Pgm_env.log("error","ftp尝试链接失败建议重启设备并且查看配置文件")
         client.publish(Pgm_env.config["theme"]["r_topic_err"],"ftp尝试链接失败,建议重启并查看配置文件",0)
         return
+    os.system("gpio write {} 1".format(Pgm_env["upan"]["ftpled"]))
     if(not Pgm_env.thread_status):
         thread = TeskThread(mqtt_client,tesk_queue,ftp)
         thread.start()
@@ -354,7 +366,6 @@ def on_disconnect(client, userdata, rc):
         except socket.error:
             Pgm_env.log("error","mqtt重连失败")
     Pgm_env.log("info","mqtt重新链接成功")
-
 
 def config_v(list):
     t1 = tools.get_config("./config/defconfig.ini")
@@ -375,17 +386,14 @@ def subscribe(cli,theme):
 if __name__ == "__main__":
     tools.umount(Pgm_env.data_disk)
     tools.mount(Pgm_env.data_disk,Pgm_env.data_path)
-
     mac = tools.get_mac()
     with open(os.path.join(Pgm_env.data_path,"mac.txt"),"w",encoding='utf-8') as f:
         f.writelines(mac)
     ip = tools.get_ip()
     with open(os.path.join(Pgm_env.data_path,"ip.txt"),"w",encoding='utf-8') as f:
         f.writelines(ip)
-
     tools.rmmod()
     tools.insmod(Pgm_env.data_disk)
-
     Pgm_env.log = Log(Pgm_env.pgm_path).log
     if(os.path.exists(os.path.join(Pgm_env.data_path,"config.ini"))):
         if(os.path.exists(os.path.join(Pgm_env.pgm_path,"config/config.ini"))):
@@ -414,15 +422,28 @@ if __name__ == "__main__":
         tools.insmod(Pgm_env.data_disk)
         sys.exit(-1)
 
+    # 初始化led
+    os.system("gpio mode {} out".format(Pgm_env.config["upan"]["statusled"]))
+    os.system("gpio mode {} out".format(Pgm_env.config["upan"]["ftpled"]))
+    os.system("gpio mode {} out".format(Pgm_env.config["upan"]["mqttled"]))
+    os.system("gpio mode {} out".format(Pgm_env.config["upan"]["upled"]))
+    os.system("gpio mode {} out".format(Pgm_env.config["upan"]["dowled"]))
 
 
     mqtt_client = mqttclient.Client(tools.get_mac(),clean_session = False)
     mqtt_client.on_connect = on_connect
     mqtt_client.on_message = on_message
+    mqtt_client.on_disconnect = on_disconnect
     Pgm_env.mqtt_client = mqtt_client
+
     mqtt_client.username_pw_set(Pgm_env.config["mqtt-server"]["user"],Pgm_env.config["mqtt-server"]["pwd"])
-    mqtt_client.connect(Pgm_env.config["mqtt-server"]["host"],int(Pgm_env.config["mqtt-server"]["port"]),60)
+    try:
+        mqtt_client.connect(Pgm_env.config["mqtt-server"]["host"],int(Pgm_env.config["mqtt-server"]["port"]),60)
+    except OSError as e:
+        print(e)
+        # mqtt_client.reconnect()
+        Pgm_env.log("error","mqtt连接失败")
+        
     # mqtt_client.loop_start()
     subscribe(mqtt_client,Pgm_env.config["theme"]["w_topic"])
     mqtt_client.loop_forever()
-    
